@@ -5,6 +5,19 @@
 **a. Initial design**
 
 - Briefly describe your initial UML design.
+    -The three core actions a user should be able to perform are:
+        1.Manage Pet Core Tasks
+        2.Set Dialy Constraints
+        3.Generate and View a Daily Plan
+    The initial design keeps each part of the problem in its own class,so the data,the rules,and the output done get mixed together:
+    - **Owner** — holds the pet owner's info and preferences (e.g. preferred times).It can do : add_pets() and set_preferences()
+    - **Pet** — holds the pet's info (name, species, breed) and owns a list of Tasks.It can add_task(),edit_tasks(),remove_tasks(),get_tasks()
+    - **Task** — a single care task (name, duration, priority, category like walk/feeding/meds, and whether it repeats,preferred_time).It can check for overlapping time slots(conflicts_with()) and relevant recurring tasks(is_due_today())
+    - **Scheduler** — takes a pet's tasks plus constraints (time available, priorities) and decides which tasks fit and in what order.It can sort_tasks(),filter_tasks(),resolve_conflicts(),generate_plan().
+    - **DailyPlan** — the scheduler's output: an ordered list of scheduled tasks with times, plus a short explanation of why each task was included, skipped, or placed where it is.It can format the plan for UI(display()) and return the reasoning for a specific task's placement(explain(task)).
+
+    An Owner has one or more Pets, a Pet has many Tasks, and the Scheduler reads those Tasks to build a DailyPlan.
+
 - What classes did you include, and what responsibilities did you assign to each?
 
 **b. Design changes**
