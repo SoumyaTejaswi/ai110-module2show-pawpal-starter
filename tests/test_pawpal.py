@@ -1,4 +1,5 @@
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -183,6 +184,54 @@ def test_generate_plan_skips_non_recurring_completed_tasks():
 
 
 # --- DailyPlan ------------------------------------------------------------
+
+def test_sort_by_time_orders_tasks_chronologically():
+    owner = Owner("Soumya")
+    scheduler = Scheduler(available_time=60, owner=owner)
+    scheduler.tasks = [
+        make_task(name="Evening", preferred_time="18:00"),
+        make_task(name="Morning", preferred_time="08:00"),
+        make_task(name="Afternoon", preferred_time="13:30"),
+    ]
+
+    ordered = [task.name for task in scheduler.sort_by_time()]
+
+    assert ordered == ["Morning", "Afternoon", "Evening"]
+
+
+def test_mark_completed_on_daily_task_creates_next_day_task():
+    pet = Pet("Buddy", "Dog", "Lab")
+    task = make_task(name="Walk", frequency="daily", due_date=date.today())
+    pet.add_task(task)
+
+    next_task = task.mark_completed()
+
+    assert task.completed is True
+    assert next_task is not None
+    assert next_task.completed is False
+    assert next_task.due_date == date.today() + timedelta(days=1)
+    assert next_task in pet.get_tasks()
+    assert next_task.id != task.id
+
+
+def test_scheduler_flags_duplicate_preferred_times_as_conflicts():
+    owner = Owner("Soumya")
+    buddy = Pet("Buddy", "Dog", "Lab")
+    whiskers = Pet("Whiskers", "Cat", "Tabby")
+    buddy.add_task(make_task(name="Walk", preferred_time="08:00", duration=30))
+    whiskers.add_task(make_task(name="Grooming", preferred_time="08:00", duration=20))
+    owner.add_pet(buddy)
+    owner.add_pet(whiskers)
+
+    scheduler = Scheduler(available_time=60, owner=owner)
+    scheduler.load_tasks()
+    conflicts, warnings = scheduler.detect_conflicts()
+
+    assert warnings == []
+    assert len(conflicts) == 1
+    conflicting_names = {conflicts[0][0].name, conflicts[0][1].name}
+    assert conflicting_names == {"Walk", "Grooming"}
+
 
 def test_display_includes_scheduled_and_skipped_sections():
     owner = Owner("Soumya")

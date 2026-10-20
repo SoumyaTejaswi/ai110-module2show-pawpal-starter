@@ -76,7 +76,10 @@ SKIPPED (2)
 
 ```bash
 # Run the full test suite:
-pytest
+pytest tests/test_pawpal.py
+
+# Run with verbose output (shows each test name):
+pytest tests/test_pawpal.py -v
 
 # Run with coverage:
 pytest --cov
@@ -85,8 +88,63 @@ pytest --cov
 Sample test output:
 
 ```
-# Paste your pytest output here
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-7.4.4, pluggy-1.0.0
+rootdir: /Users/soumyav/Desktop/ai110-module2show-pawpal-starter
+collected 20 items
+
+tests/test_pawpal.py::test_mark_completed_changes_task_status PASSED     [  5%]
+tests/test_pawpal.py::test_adding_task_increases_pet_task_count PASSED   [ 10%]
+tests/test_pawpal.py::test_conflicts_with_overlapping_times PASSED       [ 15%]
+tests/test_pawpal.py::test_conflicts_with_non_overlapping_times PASSED   [ 20%]
+tests/test_pawpal.py::test_recurring_task_is_always_due PASSED           [ 25%]
+tests/test_pawpal.py::test_one_time_task_due_until_completed PASSED      [ 30%]
+tests/test_pawpal.py::test_pet_add_and_get_tasks PASSED                  [ 35%]
+tests/test_pawpal.py::test_pet_edit_task_updates_matching_fields PASSED  [ 40%]
+tests/test_pawpal.py::test_pet_remove_task PASSED                        [ 45%]
+tests/test_pawpal.py::test_owner_get_all_tasks_combines_every_pet PASSED [ 50%]
+tests/test_pawpal.py::test_owner_set_preferences_merges PASSED           [ 55%]
+tests/test_pawpal.py::test_scheduler_loads_tasks_from_owner_across_multiple_pets PASSED [ 60%]
+tests/test_pawpal.py::test_sort_tasks_orders_by_priority_then_duration PASSED [ 65%]
+tests/test_pawpal.py::test_resolve_conflicts_drops_overlapping_lower_priority_task PASSED [ 70%]
+tests/test_pawpal.py::test_generate_plan_respects_time_budget_and_conflicts PASSED [ 75%]
+tests/test_pawpal.py::test_generate_plan_skips_non_recurring_completed_tasks PASSED [ 80%]
+tests/test_pawpal.py::test_sort_by_time_orders_tasks_chronologically PASSED [ 85%]
+tests/test_pawpal.py::test_mark_completed_on_daily_task_creates_next_day_task PASSED [ 90%]
+tests/test_pawpal.py::test_scheduler_flags_duplicate_preferred_times_as_conflicts PASSED [ 95%]
+tests/test_pawpal.py::test_display_includes_scheduled_and_skipped_sections PASSED [100%]
+
+============================== 20 passed in 0.04s ==============================
 ```
+
+**Task**
+- `test_mark_completed_changes_task_status` — marking any task complete sets `completed` to `True`.
+- `test_conflicts_with_overlapping_times` / `test_conflicts_with_non_overlapping_times` — `conflicts_with()` correctly flags overlapping time slots and clears non-overlapping ones.
+- `test_recurring_task_is_always_due` — a recurring task with no `frequency` set stays due even after completion (legacy-data behavior).
+- `test_one_time_task_due_until_completed` — a non-recurring task is due until it's marked complete, then no longer due.
+- `test_mark_completed_on_daily_task_creates_next_day_task` — completing a `daily` task spawns a fresh, pending `Task` due exactly one day later, attached to the same pet's task list.
+
+**Pet**
+- `test_adding_task_increases_pet_task_count` — `add_task()` grows the pet's task list.
+- `test_pet_add_and_get_tasks` — `get_tasks()` returns what was added.
+- `test_pet_edit_task_updates_matching_fields` — `edit_task()` updates only the specified fields on the matching task.
+- `test_pet_remove_task` — `remove_task()` removes the task by id.
+
+**Owner**
+- `test_owner_get_all_tasks_combines_every_pet` — `get_all_tasks()` flattens tasks across all of an owner's pets.
+- `test_owner_set_preferences_merges` — `set_preferences()` merges new preferences without dropping existing ones.
+
+**Scheduler**
+- `test_scheduler_loads_tasks_from_owner_across_multiple_pets` — `load_tasks()` pulls every pet's tasks through the owner.
+- `test_sort_by_time_orders_tasks_chronologically` — `sort_by_time()` orders tasks by `preferred_time` regardless of input order.
+- `test_sort_tasks_orders_by_priority_then_duration` — `sort_tasks()` orders by priority first, then shortest duration.
+- `test_resolve_conflicts_drops_overlapping_lower_priority_task` — `resolve_conflicts()` keeps the first (higher-priority) task and drops the one that overlaps it.
+- `test_scheduler_flags_duplicate_preferred_times_as_conflicts` — `detect_conflicts()` flags two tasks from different pets scheduled at the same time, with no false-positive warnings.
+- `test_generate_plan_respects_time_budget_and_conflicts` — `generate_plan()` schedules what fits the time budget and skips tasks that run over or conflict.
+- `test_generate_plan_skips_non_recurring_completed_tasks` — a completed, non-recurring task is skipped with a "Not due today." explanation.
+
+**DailyPlan**
+- `test_display_includes_scheduled_and_skipped_sections` — `display()` renders both the scheduled and skipped sections with task names present.
 
 ## 📐 Smarter Scheduling
 
