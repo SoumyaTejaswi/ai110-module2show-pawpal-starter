@@ -99,13 +99,16 @@ if owner.pets:
             )
         )
 
-    all_tasks = owner.get_all_tasks()
-    if all_tasks:
+    task_scheduler = Scheduler(available_time=0, owner=owner)
+    task_scheduler.load_tasks()
+    sorted_tasks = task_scheduler.sort_by_time()
+
+    if sorted_tasks:
         st.write("Current tasks:")
         st.table(
             [
                 {
-                    "pet": pet.name,
+                    "pet": task._pet.name if task._pet else "unknown",
                     "title": task.name,
                     "category": task.category,
                     "duration_minutes": task.duration,
@@ -113,10 +116,18 @@ if owner.pets:
                     "preferred_time": task.preferred_time,
                     "recurring": task.recurring,
                 }
-                for pet in owner.pets
-                for task in pet.get_tasks()
+                for task in sorted_tasks
             ]
         )
+
+        conflict_messages = task_scheduler.describe_conflicts()
+        if conflict_messages:
+            st.warning(
+                "⚠️ Scheduling conflicts detected:\n\n"
+                + "\n".join(f"- {msg}" for msg in conflict_messages)
+            )
+        else:
+            st.success("✅ No scheduling conflicts detected.")
     else:
         st.info("No tasks yet. Add one above.")
 else:
@@ -132,4 +143,38 @@ available_time = st.number_input(
 if st.button("Generate schedule"):
     scheduler = Scheduler(available_time=int(available_time), owner=owner)
     plan = scheduler.generate_plan()
-    st.text(plan.display())
+
+    time_used = sum(task.duration for task in plan.scheduled_tasks)
+    st.success(
+        f"✅ Scheduled {len(plan.scheduled_tasks)} task(s) — "
+        f"{time_used}/{plan.available_time} min used"
+    )
+
+    if plan.scheduled_tasks:
+        st.table(
+            [
+                {
+                    "time": task.preferred_time,
+                    "title": task.name,
+                    "duration_minutes": task.duration,
+                    "priority": task.priority,
+                    "why": plan.explain(task),
+                }
+                for task in sorted(plan.scheduled_tasks, key=lambda t: t.preferred_time)
+            ]
+        )
+    else:
+        st.info("No tasks scheduled.")
+
+    if plan.skipped_tasks:
+        st.warning(f"⚠️ {len(plan.skipped_tasks)} task(s) skipped")
+        st.table(
+            [
+                {
+                    "title": task.name,
+                    "priority": task.priority,
+                    "reason": plan.explain(task),
+                }
+                for task in plan.skipped_tasks
+            ]
+        )

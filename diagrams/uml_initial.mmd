@@ -1,0 +1,68 @@
+classDiagram
+    class Owner {
+        +String name
+        +Dict preferences
+        +List~Pet~ pets
+        +add_pet(pet) void
+        +set_preferences(prefs) void
+        +get_all_tasks() List~Task~
+    }
+
+    class Pet {
+        +String name
+        +String species
+        +String breed
+        +List~Task~ tasks
+        +add_task(task) void
+        +edit_task(task_id, changes) void
+        +remove_task(task_id) void
+        +get_tasks() List~Task~
+    }
+
+    class Task {
+        +String name
+        +String category
+        +int duration
+        +String priority
+        +bool recurring
+        +String preferred_time
+        +String id
+        +bool completed
+        +String frequency
+        +date due_date
+        +conflicts_with(other_task) bool
+        +is_due_today() bool
+        +mark_completed() Task
+        +next_occurrence() Task
+    }
+
+    class Scheduler {
+        +int available_time
+        +Owner owner
+        +List~Task~ tasks
+        +load_tasks() void
+        +filter_tasks() List~Task~
+        +filter_by(pet_name, completed) List~Task~
+        +sort_by_time() List~Task~
+        +sort_tasks() List~Task~
+        +resolve_conflicts() List~Task~
+        +detect_conflicts() Tuple
+        +describe_conflicts() List~String~
+        +generate_plan() DailyPlan
+    }
+
+    class DailyPlan {
+        +List~Task~ scheduled_tasks
+        +List~Task~ skipped_tasks
+        +Dict explanations
+        +int available_time
+        +display() String
+        +explain(task) String
+    }
+
+    Owner "1" --> "many" Pet : owns
+    Pet "1" --> "many" Task : has
+    Task "many" --> "1" Pet : _pet (back-ref)
+    Scheduler "1" --> "1" Owner : reads tasks from
+    Scheduler "1" --> "many" Task : holds
+    Scheduler --> DailyPlan : generates

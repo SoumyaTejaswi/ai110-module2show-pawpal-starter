@@ -72,12 +72,16 @@
 **a. What you tested**
 
 - What behaviors did you test?
+    -My suite (tests/test_pawpal.py) has 20 tests covering every class. For Task: that conflicts_with() correctly flags overlapping time slots and clears non-overlapping ones, that is_due_today() behaves differently for recurring-with-no-frequency tasks (always due) versus one-time tasks (due until completed), and that mark_completed() on a daily task spawns a fresh next-day task attached to the same pet. For Pet: adding, editing, and removing tasks by id. For Owner: that get_all_tasks() combines tasks across multiple pets, and that set_preferences() merges instead of overwriting. For Scheduler: that sort_by_time() and sort_tasks() produce the right order, that resolve_conflicts() keeps the higher-priority task and drops the one that overlaps it, that detect_conflicts() flags a duplicate time slot across two different pets, and that generate_plan() respects the available-time budget while correctly skipping conflicting or not-due tasks. For DailyPlan: that display() renders both the scheduled and skipped sections.
 - Why were these tests important?
+    -These are the behaviors the whole project actually promises in the README — a daily plan that respects time and priority and explains itself — so each test locks in one specific guarantee the scheduler needs to keep. The recurrence and due-date tests mattered most to me because that logic is the easiest to get subtly wrong (e.g. rolling the due date forward from today instead of from the task's own due_date, which would silently skip a day when a task is completed late), and a passing test catches that kind of regression immediately instead of only showing up as a confusing bug days later in the UI.
 
 **b. Confidence**
 
 - How confident are you that your scheduler works correctly?
+    -Fairly confident for the paths I actually built tests around — sorting, filtering, conflict detection, the time-budget pipeline, and daily/weekly recurrence all pass and match what main.py shows in the terminal. I'm less confident about paths nobody writes tests for just because they're less obvious to think of, which is exactly the gap described below.
 - What edge cases would you test next if you had more time?
+    -A malformed preferred_time (e.g. "8:00" or an empty string): detect_conflicts() already catches this and turns it into a warning instead of crashing, but generate_plan() calls resolve_conflicts() → conflicts_with() directly, which has no such guard, so a bad time string would crash the whole scheduling run instead of being skipped with an explanation. I'd also want tests for available_time being 0 or negative, a single task longer than the whole available_time budget, and a task whose duration is 0, since none of those are covered yet and the time-budget math in generate_plan() hasn't been checked against them explicitly.
 
 ---
 
@@ -86,11 +90,14 @@
 **a. What went well**
 
 - What part of this project are you most satisfied with?
+    - I'm most satisfied with the logic layer's design. The assignment only called for 4 classes, but I split the scheduler's output into its own DailyPlan class instead of folding it into Scheduler, which gave me 5 classes total. That separation meant each class owns exactly one concern — Owner/Pet/Task are purely data and structure (who owns what), Scheduler is purely decision-making (what fits, in what order), and DailyPlan is purely the result (what got scheduled, what didn't, and why). Because of that split, I could change scheduling rules — like the priority/duration tiebreak, or the time-budget cutoff — without touching how tasks are stored on a Pet, and I could change how the plan is displayed without touching the scheduling logic at all. It also made the Scheduler's pipeline (filter_tasks -> sort_tasks -> resolve_conflicts -> generate_plan) easy to reason about and test one step at a time instead of as one big function, and it's the reason Owner.get_all_tasks() could plug straight into the Scheduler to support multiple pets without any extra rework.
 
 **b. What you would improve**
 
 - If you had another iteration, what would you improve or redesign?
+    - I would work on testing variety of test scenarios — specifically the edge cases I already identified but didn't get to in section 4: a malformed preferred_time crashing generate_plan() instead of being skipped with a warning (the way detect_conflicts() already handles it), available_time being 0 or negative, a single task longer than the whole time budget, and a task with duration=0. Beyond tests, I'd also fix that preferred_time gap itself — right now resolve_conflicts() has no guard against invalid times even though detect_conflicts() does, which is an inconsistency in the same class rather than just a missing test.
 
 **c. Key takeaway**
 
 - What is one important thing you learned about designing systems or working with AI on this project?
+    - The biggest thing I learned is that AI can generate ideas quickly, but it doesn’t always understand what a project needs. It suggested an overly complex solution for an app handling just 5–20 tasks a day and treated running its own code as proof that it worked. I still had to define what “correct” meant and verify it through tests and a working program.Keeping my design separated—Owner, Pet, and Task for data, Scheduler for rules, and DailyPlan for output—made checking its work easier. My main takeaway is that good design makes AI’s code easier to verify, but checking it is still my responsibility.

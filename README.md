@@ -160,12 +160,80 @@ tests/test_pawpal.py::test_display_includes_scheduled_and_skipped_sections PASSE
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+### What the UI lets you do
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+Running `streamlit run app.py` gives you a single-page app with three sections:
+
+- **Owner + Pets** — name the owner, then add one or more pets (name, species, breed). Every pet gets its own task list under the hood.
+- **Tasks** — pick a pet from a dropdown and add a task to it (title, category, duration, preferred time, priority, recurring flag). As soon as any tasks exist, the app shows a live table of every task across all pets (sorted chronologically) and a conflict banner underneath it.
+- **Build Schedule** — enter how many minutes are available today and click **Generate schedule** to run the full scheduling pipeline and see the resulting plan.
+
+### Example workflow
+
+1. Enter an owner name and add a pet, e.g. **Buddy** (dog).
+2. Add a second pet, **Whiskers** (cat), so the demo can show multi-pet scheduling.
+3. Add a task to Buddy: "Morning Walk", 30 min, high priority, 08:00.
+4. Add a task to Whiskers at the same time: "Grooming", 20 min, medium priority, 08:00. The task table updates instantly, and a ⚠️ conflict warning appears naming both pets and tasks since their time slots overlap.
+5. Add a couple more tasks (e.g. "Give Meds" at 08:15, high priority) to give the scheduler something to choose between.
+6. Set "Available time today" to 60 minutes and click **Generate schedule**.
+7. Review the result: a "Scheduled" table (time, duration, priority, and *why* each task made the cut) and, if anything didn't fit, a "Skipped" table explaining each reason — out of time, conflicting with a higher-priority task, or not due today.
+
+### Key Scheduler behaviors on display
+
+- **Chronological + priority sorting** — the task list is always shown sorted by `preferred_time` (`sort_by_time()`); when building the plan, `sort_tasks()` additionally orders by priority then shortest duration before anything is scheduled.
+- **Conflict warnings** — `detect_conflicts()`/`describe_conflicts()` flag every overlapping pair of tasks, including across different pets, the moment two tasks share an overlapping time window.
+- **Conflict resolution** — `generate_plan()` uses `resolve_conflicts()` to keep only the higher-priority task from each overlapping pair and skip the rest, with the skip reason recorded.
+- **Time-budget enforcement** — tasks are packed into the plan in priority order until the available time runs out; anything that doesn't fit is skipped with an explanation showing exactly how much time was left.
+- **Due-today filtering** — a completed, non-recurring task drops out of the plan with a "Not due today." explanation instead of being scheduled again.
+
+### Sample CLI output (`python main.py`)
+
+`main.py` exercises the same logic layer outside of Streamlit — two pets (Buddy and Whiskers) with overlapping and non-overlapping tasks, one task already marked completed, and a 60-minute time budget:
+
+```
+=== All tasks, sorted by time (Scheduler.sort_by_time) ===
+  08:00  Morning Walk           [high] (pending)
+  08:00  Grooming               [medium] (pending)
+  08:15  Give Meds              [high] (pending)
+  08:30  Feed Breakfast         [high] (done)
+  09:00  Vet Checkup            [medium] (pending)
+  18:00  Litter Box Cleaning    [low] (pending)
+
+=== Buddy's tasks only (Scheduler.filter_by(pet_name='Buddy')) ===
+  09:00  Vet Checkup            [medium] (pending)
+  08:15  Give Meds              [high] (pending)
+  08:00  Morning Walk           [high] (pending)
+
+=== Completed tasks (Scheduler.filter_by(completed=True)) ===
+  08:30  Feed Breakfast         [high] (done)
+
+=== Whiskers' pending tasks (filter_by(pet_name='Whiskers', completed=False)) ===
+  18:00  Litter Box Cleaning    [low] (pending)
+  08:00  Grooming               [medium] (pending)
+
+=== Conflict detection (Scheduler.detect_conflicts / describe_conflicts) ===
+  3 conflicting pair(s), 0 warning(s):
+  - Buddy's 'Morning Walk' (08:00) overlaps with Whiskers's 'Grooming' (08:00).
+  - Buddy's 'Morning Walk' (08:00) overlaps with Buddy's 'Give Meds' (08:15).
+  - Whiskers's 'Grooming' (08:00) overlaps with Buddy's 'Give Meds' (08:15).
+
+=== Today's Schedule ===
+===== Today's Schedule =====
+Time used: 35 / 60 min
+
+SCHEDULED (3)
+  08:15  Give Meds               10 min  [high]
+  08:30  Feed Breakfast          15 min  [high]
+  18:00  Litter Box Cleaning     10 min  [low]
+
+SKIPPED (3)
+  Vet Checkup            - Not enough time left today (35 min remaining, needs 60 min).
+  Morning Walk           - Conflicts with a higher-priority task at 08:00.
+  Grooming               - Conflicts with a higher-priority task at 08:00.
+```
+
+Note how `Give Meds` (10 min) is scheduled ahead of `Morning Walk` (30 min) even though Morning Walk comes first chronologically: both are high priority, but `sort_tasks()` breaks the tie by shortest duration, and since the two overlap, `resolve_conflicts()` keeps the one that was sorted first — `Give Meds` — and drops `Morning Walk`.
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+
+
