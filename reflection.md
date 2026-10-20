@@ -40,7 +40,11 @@
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
+    -I gave the Scheduler.detect_conflicts() method to AI for improving it.AI Suggested a heap version as the more correct algorithm,by adding a tie-breaking counter and less obvious patter-for a pet scheduler where a pet owner had ==s around 5-20 tasks a day.The list comprehension version is never actually going to be abottleneck.
+
+    I kept the current version of the code
 - Why is that tradeoff reasonable for this scenario?
+    -A pet owner's daily task list is realistically a handful to maybe twenty items — at that size, the O(n log n) sweep I already use and a more "optimal" heap-based version run in effectively the same wall-clock time (microseconds either way), so there's no real performance to gain by switching. What the heap version would cost is readability: it needs an artificial tie-breaking counter alongside each task (since Task objects aren't directly comparable), and the lazy-pop-while-expired pattern is a less obvious idiom than a plain list comprehension that filters out anything that's ended. Optimizing for a performance difference that would only show up at a scale this app will never see would just make the conflict-detection logic harder to read and grade for no practical benefit — so I kept the simpler version and left a note on why, rather than switching to the "more correct" algorithm.
 
 ---
 

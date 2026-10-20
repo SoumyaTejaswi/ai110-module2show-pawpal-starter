@@ -90,14 +90,15 @@ Sample test output:
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
-
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Chronological sorting | `Scheduler.sort_by_time()` | Sorts all loaded tasks by `preferred_time` (via `Task._start_minutes()`). Run before `sort_tasks()` inside `generate_plan()`, so Python's stable sort makes same-priority/same-duration ties resolve in time order instead of arbitrary list order. |
+| Priority sorting | `Scheduler.sort_tasks()` | Sorts tasks by priority (`high` → `medium` → `low`), then by shortest duration, to decide scheduling order. |
+| Filtering by pet / completion status | `Scheduler.filter_by(pet_name=None, completed=None)` | Filters tasks by owning pet's name and/or completion status; either argument can be omitted to skip that filter. Matches `pet_name` against `owner.pets` directly, since `Task` has no back-reference for name-based lookup. |
+| Due-today filtering | `Scheduler.filter_tasks()`, `Task.is_due_today()` | Keeps only tasks whose `due_date` has arrived and aren't completed yet. A recurring task with no `frequency` set (legacy data) has no due-date rollover to rely on, so it's always treated as due regardless of completion. |
+| Conflict detection | `Scheduler.detect_conflicts()`, `Scheduler.describe_conflicts()` | Reports every pair of overlapping tasks — same pet or across different pets — using an O(n log n) time-sorted sweep (sort once, then track which tasks are still "active") instead of comparing every possible pair. A task with a malformed `preferred_time` is skipped and recorded as a warning message instead of crashing the run. `describe_conflicts()` turns the result into readable strings naming both pets, tasks, and times. |
+| Conflict resolution | `Scheduler.resolve_conflicts()` | Used inside `generate_plan()` to decide which of two overlapping tasks actually gets scheduled: it keeps the first task (in priority/time order) that doesn't overlap an already-kept one, dropping the rest. This is a *decision* (greedy keep-or-drop), distinct from `detect_conflicts()`, which only *reports* every overlap without picking a winner. |
+| Recurring tasks | `Task.mark_completed()`, `Task.next_occurrence()` | Marking a `daily`/`weekly` task complete automatically spawns its next occurrence as a new `Task` — added directly onto the same pet's task list via a `_pet` back-reference set in `Pet.add_task()`. The new occurrence's `due_date` is computed with `timedelta` (+1 day for daily, +7 days for weekly), anchored to the *completed* task's own due date rather than today's date, so a late completion doesn't skip an extra day ahead. |
 
 ## 📸 Demo Walkthrough
 
